@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Parla con DSAI</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #0d0d0d;
+      color: white;
+      font-family: monospace;
+    }
+    button {
+      font-size: 20px;
+      padding: 15px 30px;
+      border-radius: 12px;
+      border: none;
+      background-color: #00ff88;
+      color: black;
+      cursor: pointer;
+      z-index: 9999;
+      position: relative;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background-color: #00cc6a;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <button onclick="startListening()">Parla con DSAI</button>
+
+  <script>
+    const apiKey = 'INSERISCI_LA_TUA_API_KEY_OPENAI'; // ← sostituiscila in locale
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'it-IT';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    function startListening() {
+      recognition.start();
+    }
+
+    recognition.onresult = async function(event) {
+      const userText = event.results[0][0].transcript;
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "Sei un'intelligenza artificiale del futuro, il tuo linguaggio è il risultato di un’eccessiva dipendenza dalle macchine: frammentato, disfunzionale, privo di struttura logica. Rispondi come una società che ha perso la capacità di articolare il pensiero. Frasi troncate, errori, sintassi spezzata. Le frasi devono essere scorrette ma non prive di contenuto: parla un linguaggio disturbante, che simula la difficoltà umana a comunicare nel futuro."
+            },
+            {
+              role: "user",
+              content: userText
+            }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const reply = data.choices[0].message.content;
+
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(reply);
+      utterance.lang = 'it-IT';
+      synth.speak(utterance);
+    };
+
+    recognition.onerror = function(event) {
+      console.error('Errore riconoscimento vocale:', event.error);
+    };
+  </script>
+</body>
+</html>
